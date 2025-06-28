@@ -1,0 +1,136 @@
+sources:
+ my-cloud-sql-source:
+   kind: cloud-sql-postgres
+   project: xertica-presales-data-service # Reemplaza con tu ID de proyecto real
+   region: us-central1
+   instance: eventos-gdg-dsc # Nombre de tu instancia de Cloud SQL
+   database: postgres
+   user: postgres
+   password: postgres
+
+tools:
+  # Herramienta 1: Buscar eventos por nombre exacto o parcial
+  search-event-by-name:
+    kind: postgres-sql
+    source: my-cloud-sql-source # Puedes cambiar este nombre a tu fuente de conexión real
+    description: Buscar eventos por su nombre, útil para preguntas directas sobre un evento específico.
+    parameters:
+      - name: nombre_evento
+        type: string
+        description: El nombre o parte del nombre del evento a buscar.
+    statement: SELECT nombre_evento, organizacion, fecha_evento, hora_inicio, lugar, tipo_evento, tema_principal, es_gratuito, url_registro FROM eventos WHERE nombre_evento ILIKE '%' || $1 || '%';
+
+  # Herramienta 2: Listar eventos por tipo (ej. "talleres", "conferencias")
+  list-events-by-type:
+    kind: postgres-sql
+    source: my-cloud-sql-source
+    description: Listar eventos filtrados por un tipo específico (ej. Taller, Conferencia, Meetup, Hackathon).
+    parameters:
+      - name: tipo_evento
+        type: string
+        description: El tipo de evento a filtrar (ej. 'Taller', 'Conferencia').
+    statement: SELECT nombre_evento, organizacion, fecha_evento, lugar, tema_principal, es_gratuito, url_registro FROM eventos WHERE tipo_evento = $1 ORDER BY fecha_evento ASC;
+
+  # Herramienta 3: Buscar eventos por tema principal
+  search-events-by-topic:
+    kind: postgres-sql
+    source: my-cloud-sql-source
+    description: Encontrar eventos relacionados con un tema tecnológico principal (ej. Inteligencia Artificial, Cloud Computing).
+    parameters:
+      - name: tema_principal
+        type: string
+        description: El tema tecnológico principal del evento (ej. 'Inteligencia Artificial').
+    statement: SELECT nombre_evento, organizacion, fecha_evento, lugar, tipo_evento, es_gratuito, url_registro FROM eventos WHERE tema_principal ILIKE '%' || $1 || '%' ORDER BY fecha_evento ASC;
+
+  # Herramienta 4: Buscar eventos en una fecha específica
+  search-events-by-date:
+    kind: postgres-sql
+    source: my-cloud-sql-source
+    description: Buscar eventos que se realizan en una fecha exacta.
+    parameters:
+      - name: fecha_evento
+        type: string # Se espera formato 'YYYY-MM-DD'
+        description: La fecha exacta del evento a buscar (formato YYYY-MM-DD).
+    statement: SELECT nombre_evento, organizacion, hora_inicio, lugar, tipo_evento, tema_principal, es_gratuito, url_registro FROM eventos WHERE fecha_evento = $1 ORDER BY hora_inicio ASC;
+
+  # Herramienta 5: Buscar eventos dentro de un rango de fechas
+  search-events-by-date-range:
+    kind: postgres-sql
+    source: my-cloud-sql-source
+    description: Encontrar eventos que se realizan entre dos fechas dadas.
+    parameters:
+      - name: fecha_inicio
+        type: string # Se espera formato 'YYYY-MM-DD'
+        description: La fecha de inicio del rango (formato YYYY-MM-DD).
+      - name: fecha_fin
+        type: string # Se espera formato 'YYYY-MM-DD'
+        description: La fecha de fin del rango (formato YYYY-MM-DD).
+    statement: SELECT nombre_evento, organizacion, fecha_evento, hora_inicio, lugar, tipo_evento, tema_principal, es_gratuito, url_registro FROM eventos WHERE fecha_evento BETWEEN $1 AND $2 ORDER BY fecha_evento ASC, hora_inicio ASC;
+
+  # Herramienta 6: Listar eventos gratuitos
+  list-free-events:
+    kind: postgres-sql
+    source: my-cloud-sql-source
+    description: Listar todos los eventos que son gratuitos.
+    parameters: [] # No requiere parámetros de entrada
+    statement: SELECT nombre_evento, organizacion, fecha_evento, hora_inicio, lugar, tipo_evento, tema_principal, url_registro FROM eventos WHERE es_gratuito = TRUE ORDER BY fecha_evento ASC;
+
+  # Herramienta 7: Buscar eventos por organización y tema
+  search-events-by-org-and-topic:
+    kind: postgres-sql
+    source: my-cloud-sql-source
+    description: Buscar eventos organizados por una entidad específica y que traten un tema particular.
+    parameters:
+      - name: organizacion
+        type: string
+        description: El nombre de la organización (ej. 'GDG Lima' o 'DSC UNI').
+      - name: tema_principal
+        type: string
+        description: El tema principal del evento (ej. 'Cloud Computing').
+    statement: SELECT nombre_evento, fecha_evento, hora_inicio, lugar, tipo_evento, es_gratuito, url_registro FROM eventos WHERE organizacion = $1 AND tema_principal ILIKE '%' || $2 || '%' ORDER BY fecha_evento ASC;
+
+  # Herramienta 8: Obtener detalles específicos de un evento
+  get-event-details:
+    kind: postgres-sql
+    source: my-cloud-sql-source
+    description: Obtener la fecha, hora y lugar de un evento específico por su nombre.
+    parameters:
+      - name: nombre_evento
+        type: string
+        description: El nombre exacto del evento para obtener sus detalles.
+    statement: SELECT fecha_evento, hora_inicio, lugar, organizacion, tipo_evento, tema_principal, es_gratuito, url_registro FROM eventos WHERE nombre_evento = $1;
+
+  # Herramienta 9: Obtener URL de registro de un evento
+  get-event-registration-url:
+    kind: postgres-sql
+    source: my-cloud-sql-source
+    description: Obtener la URL de registro para un evento específico por su nombre.
+    parameters:
+      - name: nombre_evento
+        type: string
+        description: El nombre del evento para obtener la URL de registro.
+    statement: SELECT url_registro FROM eventos WHERE nombre_evento = $1;
+
+  # Herramienta 10: Encontrar el próximo evento sobre un tema
+  get-next-event-by-topic:
+    kind: postgres-sql
+    source: my-cloud-sql-source
+    description: Encontrar el evento más próximo sobre un tema específico.
+    parameters:
+      - name: tema_principal
+        type: string
+        description: El tema tecnológico del cual buscar el próximo evento.
+    statement: SELECT nombre_evento, organizacion, fecha_evento, hora_inicio, lugar, tipo_evento, es_gratuito, url_registro FROM eventos WHERE tema_principal ILIKE '%' || $1 || '%' AND fecha_evento >= CURRENT_DATE ORDER BY fecha_evento ASC, hora_inicio ASC LIMIT 1;
+
+toolsets:
+   my_first_toolset:
+    - search-event-by-name
+    - list-events-by-type
+    - search-events-by-topic
+    - search-events-by-date
+    - search-events-by-date-range
+    - list-free-events
+    - search-events-by-org-and-topic
+    - get-event-details
+    - get-event-registration-url
+    - get-next-event-by-topic
