@@ -1,1 +1,5 @@
-.env
+# Evita subir archivos de entorno y credenciales
+*.env
+**/.env
+.env.*
+**/.env.*
